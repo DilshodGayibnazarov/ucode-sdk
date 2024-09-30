@@ -6,10 +6,13 @@ type (
 	}
 
 	Argument struct {
-		AppId       string  `json:"app_id"`
-		TableSlug   string  `json:"table_slug"`
-		Request     Request `json:"request"`
-		DisableFaas bool    `json:"disable_faas"`
+		AppId             string  `json:"app_id"`
+		TableSlug         string  `json:"table_slug"`
+		Request           Request `json:"request"`
+		DisableFaas       bool    `json:"disable_faas"`
+		BlockCached       bool    `json:"block_cached"`        //only for v1 apis
+		BlockBuilder      bool    `json:"block_builder"`       //only for v1 apis
+		BlockedLoginTable bool    `json:"blocked_login_table"` //only for v1 apis
 	}
 
 	ArgumentWithPegination struct {

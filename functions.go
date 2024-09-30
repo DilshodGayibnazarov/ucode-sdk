@@ -16,6 +16,13 @@ type UcodeApis interface {
 	*/
 	CreateObject(arg *Argument) (Datas, Response, error)
 	/*
+		CreateObjectV1 is a function that creates new object.
+		With Block_builder and blocked_login_table features
+
+		Works for Mongo
+	*/
+	CreateObjectV1(arg *Argument) (Datas, Response, error)
+	/*
 		GetList is function that get list of objects from specific table using filter.
 		This method works slower because it gets all the information
 		about the table, fields and view.
@@ -69,6 +76,12 @@ type UcodeApis interface {
 		Works for [Mongo, Postgres]
 	*/
 	UpdateObject(arg *Argument) (ClientApiUpdateResponse, Response, error)
+	/*
+		UpdateObject is a function that updates specific object
+		With block_builder feature. It uses object api
+		Works for Mongo
+	*/
+	UpdateObjectV1(arg *Argument) (ClientApiUpdateResponse, Response, error)
 	/*
 		MultipleUpdate is a function that updates multiple objects at once
 
@@ -134,6 +147,42 @@ func (o *object) CreateObject(arg *Argument) (Datas, Response, error) {
 		}
 		createdObject Datas
 		url           = fmt.Sprintf("%s/v2/items/%s?from-ofs=%t", o.config.BaseURL, arg.TableSlug, arg.DisableFaas)
+	)
+
+	var appId = o.config.AppId
+	if arg.AppId != "" {
+		appId = arg.AppId
+	}
+
+	header := map[string]string{
+		"authorization": "API-KEY",
+		"X-API-KEY":     appId,
+	}
+
+	createObjectResponseInByte, err := o.DoRequest(url, "POST", arg.Request, header)
+	if err != nil {
+		response.Data = map[string]interface{}{"description": string(createObjectResponseInByte), "message": "Can't send request", "error": err.Error()}
+		response.Status = "error"
+		return Datas{}, response, err
+	}
+
+	err = json.Unmarshal(createObjectResponseInByte, &createdObject)
+	if err != nil {
+		response.Data = map[string]interface{}{"description": string(createObjectResponseInByte), "message": "Error while unmarshalling create object", "error": err.Error()}
+		response.Status = "error"
+		return Datas{}, response, err
+	}
+
+	return createdObject, response, nil
+}
+
+func (o *object) CreateObjectV1(arg *Argument) (Datas, Response, error) {
+	var (
+		response = Response{
+			Status: "done",
+		}
+		createdObject Datas
+		url           = fmt.Sprintf("%s/v1/object/%s?from-ofs=%t&block_builder=%t&blocked_login_table=%t", o.config.BaseURL, arg.TableSlug, arg.DisableFaas, arg.BlockBuilder, arg.BlockedLoginTable)
 	)
 
 	var appId = o.config.AppId
@@ -413,13 +462,49 @@ func (o *object) UpdateObject(arg *Argument) (ClientApiUpdateResponse, Response,
 	return updateObject, response, nil
 }
 
+func (o *object) UpdateObjectV1(arg *Argument) (ClientApiUpdateResponse, Response, error) {
+	var (
+		response = Response{
+			Status: "done",
+		}
+		updateObject ClientApiUpdateResponse
+		url          = fmt.Sprintf("%s/v1/object/%s?from-ofs=%t&block_builder=%t", o.config.BaseURL, arg.TableSlug, arg.DisableFaas, arg.BlockBuilder)
+	)
+
+	var appId = o.config.AppId
+	if arg.AppId != "" {
+		appId = arg.AppId
+	}
+
+	header := map[string]string{
+		"authorization": "API-KEY",
+		"X-API-KEY":     appId,
+	}
+
+	updateObjectResponseInByte, err := o.DoRequest(url, "PUT", arg.Request, header)
+	if err != nil {
+		response.Data = map[string]interface{}{"description": string(updateObjectResponseInByte), "message": "Error while updating object", "error": err.Error()}
+		response.Status = "error"
+		return ClientApiUpdateResponse{}, response, err
+	}
+
+	err = json.Unmarshal(updateObjectResponseInByte, &updateObject)
+	if err != nil {
+		response.Data = map[string]interface{}{"description": string(updateObjectResponseInByte), "message": "Error while unmarshalling update object", "error": err.Error()}
+		response.Status = "error"
+		return ClientApiUpdateResponse{}, response, err
+	}
+
+	return updateObject, response, nil
+}
+
 func (o *object) MultipleUpdate(arg *Argument) (ClientApiMultipleUpdateResponse, Response, error) {
 	var (
 		response = Response{
 			Status: "done",
 		}
 		multipleUpdateObject ClientApiMultipleUpdateResponse
-		url                  = fmt.Sprintf("%s/v1/object/multiple-update/%s?from-ofs=%t", o.config.BaseURL, arg.TableSlug, arg.DisableFaas)
+		url                  = fmt.Sprintf("%s/v1/object/multiple-update/%s?from-ofs=%t&block_builder=%t", o.config.BaseURL, arg.TableSlug, arg.DisableFaas, arg.BlockBuilder)
 	)
 
 	var appId = o.config.AppId
